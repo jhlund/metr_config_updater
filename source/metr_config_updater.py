@@ -85,11 +85,8 @@ def retrieve_config(url_path, nr_retries, time_wait):
 
 
 @cli.command()
-@click.option('-u', '--url_path', default="http://82.165.112.45:4710/config/AC67DD", help='path to config server')
-@click.option('-C', '--config_path', required=True, help='path to local config file')
-@click.option('-n', '--nr_retries', default=10, help='nr of retries if failed connection')
-@click.option('-t', '--time_wait', default=1.0, help='nr of seconds to wait between each retry')
-def update_config(url_path, config_path, nr_retries, time_wait):
+@click.option('-C', '--updater_config_path', default="metr_config_updater.config", help='path to local config file')
+def update_config(updater_config_path):
     """
     Develop a solution to obtain configuration data for an IoT device on boot
 
@@ -107,6 +104,16 @@ def update_config(url_path, config_path, nr_retries, time_wait):
     Remember that this should run in a headless linux system without any intervention (you can do it in a way that would run in a Raspberry Pi when you plug it into the power socket).
     """
     _config_file = "/home/lund/PycharmProjects/metr_config_updater/config.json"
+    try:
+        with open(updater_config_path, 'r') as updater_config:
+            config_data = json.load(updater_config)
+    except ValueError as errv:
+        _died(errv, 1)
+
+    url_path = config_data['url_path']
+    nr_retries = config_data['nr_retries']
+    time_wait = config_data['time_wait']
+    config_path = config_data['config_path']
 
     data = retrieve_config(url_path, nr_retries, time_wait)
 
