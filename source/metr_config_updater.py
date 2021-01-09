@@ -3,6 +3,7 @@ import urllib.error
 import urllib.request
 import click
 import sys
+import time
 import signal
 
 from source.version import CONFIG_RETRIEVAL_VERSION
@@ -38,12 +39,39 @@ def _died(msg, return_code=1):
     sys.exit(return_code)
 
 
+def retrieve_config(url_path, nr_retries, time_wait):
+    # https://stackoverflow.com/questions/12965203/how-to-get-json-from-webpage-into-python-script
+    data = {}
+    _done = False
+    while not _done:
+        print("Nr of retries: %s" % nr_retries)
+        try:
+            with urllib.request.urlopen(url_path) as url:
+                data = json.loads(url.read().decode())
+        except urllib.error.HTTPError as errh:
+            print("HTTPError caught")
+            nr_retries -= 1
+            continue
+        except urllib.error.URLError as erru:
+            print("HTTPError caught")
+            nr_retries -= 1
+            continue
+
+        print(data)
+        if data or nr_retries < 1:
+            _done = True
+        else:
+            time.sleep(time_wait)
+
+    return data
+
+
 @cli.command()
 @click.option('-u', '--url_path', default="http://82.165.112.45:4710/config/AC67DD", help='path to config server')
 @click.option('-C', '--config_path', required=True, help='path to local config file')
 @click.option('-n', '--nr_retries', default=10, help='nr of retries if failed connection')
-@click.option('-t', '--time_out', default=10, help='nr of seconds to wait between each retry')
-def retrive_config(url_path, config_path, nr_retries, time_out):
+@click.option('-t', '--time_wait', default=10, help='nr of seconds to wait between each retry')
+def update_config(url_path, config_path, nr_retries, time_wait):
     """
     Develop a solution to obtain configuration data for an IoT device on boot
 
@@ -61,15 +89,8 @@ def retrive_config(url_path, config_path, nr_retries, time_out):
     Remember that this should run in a headless linux system without any intervention (you can do it in a way that would run in a Raspberry Pi when you plug it into the power socket).
     """
     _config_file = "/home/lund/PycharmProjects/metr_config_updater/config.json"
-    # https://stackoverflow.com/questions/12965203/how-to-get-json-from-webpage-into-python-script
-    data = {}
-    try:
-        with urllib.request.urlopen(url_path) as url:
-            data = json.loads(url.read().decode())
-    except urllib.error.HTTPError as errh:
-        print("HTTPError caught")
-    except urllib.error.URLError as erru:
-        print("HTTPError caught")
+
+    data = retrieve_config(url_path, nr_retries, time_wait)
 
     list_of_keys = ['id', 'endpoint', 'interval']
 
