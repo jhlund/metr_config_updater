@@ -4,9 +4,9 @@ import urllib.request
 import click
 import sys
 import time
-import signal
 
 from source.version import CONFIG_RETRIEVAL_VERSION
+
 
 @click.group()
 @click.option('--debug/--no-debug', default=False)
@@ -14,24 +14,12 @@ from source.version import CONFIG_RETRIEVAL_VERSION
 @click.pass_context
 def cli(ctx, debug):
     """
-    CLI tool collection that infaces with confluence. It is meant to be used
-    in automated build chains for either collecting och creating documents from / on
-    Confluence
+    CLI tool that interfaces and downloads a json formatted config from a defined url. If successful a local config
+    file is updated.
     """
-    # ensure that ctx.obj exists and is a dict (in case `cli()` is called
-    # by means other than the `if` block below)
+    # ensure that ctx.obj exists and is a dict
     ctx.ensure_object(dict)
     ctx.obj['DEBUG'] = debug
-
-    # register signal handler for SIGINT
-    signal.signal(signal.SIGINT, signal_handler)
-
-
-def signal_handler():
-    """
-    signal handler that ensure that CTRL-C clean's up temporary data items
-    """
-    sys.exit(0)
 
 
 def _died(msg, return_code=1):
@@ -39,29 +27,59 @@ def _died(msg, return_code=1):
     sys.exit(return_code)
 
 
+def verify_config_data(data):
+    """
+    Verifies that all expected keys are present in the config data.
+    :param data: config data in dict format
+    :return: True / False
+    """
+    list_of_keys = ['id', 'endpoint', 'interval']
+    return all([key in data for key in list_of_keys])
+
+
 def retrieve_config(url_path, nr_retries, time_wait):
+    """
+
+    :param url_path:
+    :param nr_retries:
+    :param time_wait:
+    :return:
+    """
     # https://stackoverflow.com/questions/12965203/how-to-get-json-from-webpage-into-python-script
     data = {}
     _done = False
     while not _done:
-        print("Nr of retries: %s" % nr_retries)
         try:
             with urllib.request.urlopen(url_path) as url:
                 data = json.loads(url.read().decode())
-        except urllib.error.HTTPError as errh:
-            print("HTTPError caught")
-            nr_retries -= 1
-            continue
+            # raise urllib.error.HTTPError(url=url_path, code=500, msg="generated error", hdrs=None, fp=None)
+        except ValueError as errv:
+            _died(errv, 1)
         except urllib.error.URLError as erru:
-            print("HTTPError caught")
-            nr_retries -= 1
-            continue
+            # https://docs.python.org/3/library/urllib.error.html
+            print("URLError caught")
+            if nr_retries < 1:
+                _died(erru)
+            else:
+                nr_retries -= 1
+                time.sleep(time_wait)
+                continue
+
+        try:
+            if not verify_config_data(data):
+                raise ValueError("Not all expected data keys present in config data")
+        except ValueError as errv:
+            print("ValueError caught: %s" % data)
+            if nr_retries < 1:
+                _died(errv)
+            else:
+                nr_retries -= 1
+                time.sleep(time_wait)
+                continue
 
         print(data)
-        if data or nr_retries < 1:
+        if data:
             _done = True
-        else:
-            time.sleep(time_wait)
 
     return data
 
@@ -70,7 +88,7 @@ def retrieve_config(url_path, nr_retries, time_wait):
 @click.option('-u', '--url_path', default="http://82.165.112.45:4710/config/AC67DD", help='path to config server')
 @click.option('-C', '--config_path', required=True, help='path to local config file')
 @click.option('-n', '--nr_retries', default=10, help='nr of retries if failed connection')
-@click.option('-t', '--time_wait', default=10, help='nr of seconds to wait between each retry')
+@click.option('-t', '--time_wait', default=1.0, help='nr of seconds to wait between each retry')
 def update_config(url_path, config_path, nr_retries, time_wait):
     """
     Develop a solution to obtain configuration data for an IoT device on boot
@@ -92,12 +110,9 @@ def update_config(url_path, config_path, nr_retries, time_wait):
 
     data = retrieve_config(url_path, nr_retries, time_wait)
 
-    list_of_keys = ['id', 'endpoint', 'interval']
-
-    if all([key in data for key in list_of_keys]):
-        # open and write / update a local json config
-        with open(config_path, 'w') as config_file:
-            json.dump(data, config_file, indent=4)
+    # open and write / update a local json config
+    with open(config_path, 'w') as config_file:
+        json.dump(data, config_file, indent=4)
     # return status of update.
     return data
 
