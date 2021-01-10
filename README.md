@@ -30,7 +30,7 @@ The config file contains a number of needed entries.
 
 ---
 >metr_config_update --help 
-
+```
 Usage: metr_config_update [OPTIONS] COMMAND [ARGS]...
 
   CLI tool that interfaces and downloads a json formatted config from a
@@ -44,9 +44,11 @@ Options:
 Commands:  
   update-config  Updates a configuration file with data from a
                  configuration...
+```
 ---
 >metr_config_update update-config --help
-> 
+ 
+```
 Usage: metr_config_update update-config [OPTIONS]
 
   Updates a configuration file with data from a configuration server. Server
@@ -59,4 +61,5 @@ Usage: metr_config_update update-config [OPTIONS]
 Options:  
   -C, --updater_config_path TEXT  path to local config file  
   --help                          Show this message and exit.
+```
 ---
