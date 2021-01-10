@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="metr_config_retrieval",
+    name="metr_config_updater",
     version=CONFIG_RETRIEVAL_VERSION,
     author="Johan Lund",
     author_email="Johan.H.Lund@gmail.com",
