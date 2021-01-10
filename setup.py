@@ -1,5 +1,5 @@
 import setuptools
-from source.version import CONFIG_RETRIEVAL_VERSION
+from metr_config_updater_version.version import CONFIG_RETRIEVAL_VERSION
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -23,7 +23,7 @@ setuptools.setup(
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
+        "Operating System :: Linux",
         "Development Status :: 4 - Beta",
         "Environment :: Console"
     ],
